@@ -43,7 +43,49 @@ git fetch origin && git switch -c study-picky232 origin/dev
 
 ---
 
-## 4. 브랜치를 바꿀 때 — 작업상황 유지하기
+## 4. 브랜치 만들고 GitHub 에 올리기
+
+패턴은 하나: **`fetch` → `switch -c 이름 출발점` → `push -u`**
+
+**기능 브랜치** (기능당 1번, 한 명만)
+```bash
+git fetch origin
+```
+```bash
+git switch -c feature-priority origin/dev
+```
+```bash
+git push -u origin HEAD
+```
+
+| 명령 | 하는 일 |
+|---|---|
+| `git fetch origin` | GitHub 최신 상태를 받아옴 (내 코드는 안 바뀜) |
+| `git switch -c 이름 출발점` | `출발점`을 복사해 새 브랜치를 **내 컴퓨터에** 만들고 이동. 출발점 생략 시 지금 브랜치에서 땀 |
+| `git push -u origin HEAD` | 지금 브랜치(`HEAD`)를 GitHub 에 같은 이름으로 올리고 연결(`-u`). 이때 **GitHub 에도 브랜치가 생김**. 이후엔 `git push` 만 |
+
+**개인 브랜치**
+```bash
+git switch -c feature-priority-picky232
+```
+- 바로 위에서 `feature-priority` 를 만들었다면 지금 거기 있으니 출발점 생략
+- 다른 팀원이 만든 기능 브랜치에서 딸 때:
+  ```bash
+  git fetch origin && git switch -c feature-priority-picky232 origin/feature-priority
+  ```
+- 작업 · 커밋 후 `git push -u origin HEAD` → PR (base = `feature-priority`)
+
+```
+GitHub:     dev ─────▶ feature-priority ─────────────────▶ (PR 로 합쳐짐)
+                            ▲ push                              ▲ PR
+내 컴퓨터:  feature-priority ─▶ feature-priority-picky232 ─ push ┘
+```
+
+> 웹으로 만들기: 레포 → 브랜치 드롭다운 → 출발점 `dev` 선택 → 이름 입력 → **Create branch** → 로컬에서 `git fetch origin && git switch feature-priority`
+
+---
+
+## 5. 브랜치를 바꿀 때 — 작업상황 유지하기
 
 커밋하지 않은 변경은 **브랜치를 따라다닙니다.**
 그래서 주석을 달다가 그대로 `git switch` 하면 주석이 구현 브랜치로 넘어가거나, Git 이 switch 를 막습니다.
@@ -60,7 +102,7 @@ git switch feature-priority-picky232
 
 ---
 
-## 5. dev 최신 코드 받기
+## 6. dev 최신 코드 받기
 
 이 브랜치는 `origin/dev` 를 따라가도록 만들었으므로:
 ```bash
@@ -71,7 +113,7 @@ git pull
 
 ---
 
-## 6. (선택) 두 브랜치를 동시에 열기 — worktree
+## 7. (선택) 두 브랜치를 동시에 열기 — worktree
 
 공부용 폴더를 하나 더 만들어서 구현 폴더와 나란히 열 수 있습니다.
 ```bash
@@ -87,7 +129,7 @@ git worktree add "../pintos-study" study-picky232
 
 ---
 
-## 7. 하지 말 것 🚫
+## 8. 하지 말 것 🚫
 
 | 하지 말 것 | 이유 |
 |---|---|
