@@ -111,6 +111,7 @@ static void pic_end_of_interrupt (int irq);
 void intr_handler (struct intr_frame *args);
 
 /* Returns the current interrupt status. */
+// CPU가 인터럽트를 받는 상태인지 확인
 enum intr_level
 intr_get_level (void) {
 	uint64_t flags;
@@ -126,9 +127,10 @@ intr_get_level (void) {
 
 /* Enables or disables interrupts as specified by LEVEL and
    returns the previous interrupt status. */
+// 인터럽트 상태에 따라서 키거나 끔
 enum intr_level
 intr_set_level (enum intr_level level) {
-	return level == INTR_ON ? intr_enable () : intr_disable ();
+	return level == INTR_ON ? intr_enable () : intr_disable (); 
 }
 
 /* Enables interrupts and returns the previous interrupt status. */
@@ -148,15 +150,15 @@ intr_enable (void) {
 
 /* Disables interrupts and returns the previous interrupt status. */
 enum intr_level
-intr_disable (void) {
-	enum intr_level old_level = intr_get_level ();
+intr_disable (void) { // 인터럽트를 끄고, 끄기 직전의 상태를 반환함
+	enum intr_level old_level = intr_get_level (); // 현재 상태 저장
 
 	/* Disable interrupts by clearing the interrupt flag.
 	   See [IA32-v2b] "CLI" and [IA32-v3a] 5.8.1 "Masking Maskable
 	   Hardware Interrupts". */
-	asm volatile ("cli" : : : "memory");
-
-	return old_level;
+	asm volatile ("cli" : : : "memory"); // 인터럽트 끄기
+ 
+	return old_level; // 이전 상태 반환
 }
 
 /* Initializes the interrupt system. */

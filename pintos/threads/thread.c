@@ -18,7 +18,7 @@
 /* Random value for struct thread's `magic' member.
    Used to detect stack overflow.  See the big comment at the top
    of thread.h for details. */
-#define THREAD_MAGIC 0xcd6abf4b
+#define THREAD_MAGIC 0xcd6abf4b // 스택 오버플로우 감지 Canary
 
 /* Random value for basic thread
    Do not modify this value. */
@@ -135,23 +135,24 @@ thread_start (void) {
 
 /* Called by the timer interrupt handler at each timer tick.
    Thus, this function runs in an external interrupt context. */
+// 이번 tick 누가 썼는지 통계에 기록, 한 스레드가 너무 CPU오래쓰면 양보시킴
 void
-thread_tick (void) {
-	struct thread *t = thread_current ();
+thread_tick (void) { 
+	struct thread *t = thread_current (); // 실행중인 스레드 얻기
 
 	/* Update statistics. */
-	if (t == idle_thread)
-		idle_ticks++;
+	if (t == idle_thread) // idle thread 인지 확인
+		idle_ticks++; // idle tick ++
 #ifdef USERPROG
-	else if (t->pml4 != NULL)
+	else if (t->pml4 != NULL) // 유저프로그램 실행중
 		user_ticks++;
 #endif
 	else
-		kernel_ticks++;
+		kernel_ticks++; // 커널 스레드 실행중
 
 	/* Enforce preemption. */
-	if (++thread_ticks >= TIME_SLICE)
-		intr_yield_on_return ();
+	if (++thread_ticks >= TIME_SLICE) // thread_ticks는 마지막으로 스레드가 교체된 뒤 지난 tick수
+		intr_yield_on_return (); // 핸들러 끝나면 양보
 }
 
 /* Prints thread statistics. */
@@ -254,6 +255,7 @@ thread_name (void) {
 /* Returns the running thread.
    This is running_thread() plus a couple of sanity checks.
    See the big comment at the top of thread.h for details. */
+// 지금 CPU에서 실행중인 struct thread 포인터를 돌려주는 함수
 struct thread *
 thread_current (void) {
 	struct thread *t = running_thread ();

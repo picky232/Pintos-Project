@@ -1,0 +1,1 @@
+source /workspaces/pintos_22.04_lab_docker/pintos/activate

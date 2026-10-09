@@ -18,11 +18,11 @@
 #endif
 
 /* Number of timer ticks since OS booted. */
-static int64_t ticks;
+static int64_t ticks; // 부팅후 지난 틱 수
 
 /* Number of loops per timer tick.
    Initialized by timer_calibrate(). */
-static unsigned loops_per_tick;
+static unsigned loops_per_tick; 
 
 static intr_handler_func timer_interrupt;
 static bool too_many_loops (unsigned loops);
@@ -36,13 +36,13 @@ void
 timer_init (void) {
 	/* 8254 input frequency divided by TIMER_FREQ, rounded to
 	   nearest. */
-	uint16_t count = (1193180 + TIMER_FREQ / 2) / TIMER_FREQ;
+	uint16_t count = (1193180 + TIMER_FREQ / 2) / TIMER_FREQ; // 인터럽트 1번당 입력 클럭 수
 
 	outb (0x43, 0x34);    /* CW: counter 0, LSB then MSB, mode 2, binary. */
 	outb (0x40, count & 0xff);
 	outb (0x40, count >> 8);
 
-	intr_register_ext (0x20, timer_interrupt, "8254 Timer");
+	intr_register_ext (0x20, timer_interrupt, "8254 Timer"); // 인터럽트 핸들러 등록
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -71,24 +71,26 @@ timer_calibrate (void) {
 }
 
 /* Returns the number of timer ticks since the OS booted. */
-int64_t
+int64_t // 부팅 이후 지난 틱
 timer_ticks (void) {
 	enum intr_level old_level = intr_disable ();
 	int64_t t = ticks;
-	intr_set_level (old_level);
-	barrier ();
+	intr_set_level (old_level); 
+	barrier (); 
 	return t;
 }
 
 /* Returns the number of timer ticks elapsed since THEN, which
    should be a value once returned by timer_ticks(). */
+// 경과시간 계산
 int64_t
 timer_elapsed (int64_t then) {
 	return timer_ticks () - then;
 }
 
 /* Suspends execution for approximately TICKS timer ticks. */
-void
+// 
+void // 몇 틱 잘껀지
 timer_sleep (int64_t ticks) {
 	int64_t start = timer_ticks ();
 
@@ -122,10 +124,11 @@ timer_print_stats (void) {
 }
 
 /* Timer interrupt handler. */
-static void
+// 10ms 마다 하드웨어가 자동호출
+static void 
 timer_interrupt (struct intr_frame *args UNUSED) {
 	ticks++;
-	thread_tick ();
+	thread_tick (); // 
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer
