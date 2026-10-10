@@ -20,6 +20,8 @@
 /* Number of timer ticks since OS booted. */
 static int64_t ticks; // 부팅후 지난 틱 수
 
+static struct list sleep_list; // sleep 스레드 리스트
+
 /* Number of loops per timer tick.
    Initialized by timer_calibrate(). */
 static unsigned loops_per_tick; 
@@ -41,6 +43,8 @@ timer_init (void) {
 	outb (0x43, 0x34);    /* CW: counter 0, LSB then MSB, mode 2, binary. */
 	outb (0x40, count & 0xff);
 	outb (0x40, count >> 8);
+
+	list_init(&sleep_list); // sleep list 초기화
 
 	intr_register_ext (0x20, timer_interrupt, "8254 Timer"); // 인터럽트 핸들러 등록
 }
@@ -88,15 +92,29 @@ timer_elapsed (int64_t then) {
 	return timer_ticks () - then;
 }
 
+bool 
+find_sleep_list (const struct list_elem *a, const struct list_elem *b, void *aux)
+{
+	return true;
+}
+
 /* Suspends execution for approximately TICKS timer ticks. */
 // 
-void // 몇 틱 잘껀지
-timer_sleep (int64_t ticks) {
-	int64_t start = timer_ticks ();
 
+// 고쳐야 산다 못고치면 죽는다 
+void // 몇 틱 잘껀지
+timer_sleep (int64_t sleep_ticks) {
+	int64_t start = timer_ticks ();
+	
 	ASSERT (intr_get_level () == INTR_ON);
-	while (timer_elapsed (start) < ticks)
-		thread_yield ();
+	
+	if(sleep_ticks<=0) return;
+	enum intr_level old = intr_disable(); // 임계 구역 시작
+	struct thread *cur_thread = thread_current();
+	list_push_back(&sleep_list, &(cur_thread->elem));
+	thread_block();
+	cur_thread->wake_tick = sleep_ticks + ticks;
+	intr_set_level(old); // 임계 구역 끝
 }
 
 /* Suspends execution for approximately MS milliseconds. */
@@ -125,10 +143,12 @@ timer_print_stats (void) {
 
 /* Timer interrupt handler. */
 // 10ms 마다 하드웨어가 자동호출
+// 여기서 깨워야함
 static void 
 timer_interrupt (struct intr_frame *args UNUSED) {
 	ticks++;
-	thread_tick (); // 
+	
+	thread_tick (); 
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

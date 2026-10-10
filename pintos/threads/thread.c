@@ -26,7 +26,7 @@
 
 /* List of processes in THREAD_READY state, that is, processes
    that are ready to run but not actually running. */
-static struct list ready_list;
+static struct list ready_list; // 준비 리스트
 
 /* Idle thread. */
 static struct thread *idle_thread;
@@ -73,7 +73,6 @@ static tid_t allocate_tid (void);
  * somewhere in the middle, this locates the curent thread. */
 #define running_thread() ((struct thread *) (pg_round_down (rrsp ())))
 
-
 // Global descriptor table for the thread_start.
 // Because the gdt will be setup after the thread_init, we should
 // setup temporal gdt first.
@@ -92,7 +91,7 @@ static uint64_t gdt[3] = { 0, 0x00af9a000000ffff, 0x00cf92000000ffff };
 
    It is not safe to call thread_current() until this function
    finishes. */
-void
+void // 스레드 초기화 - 첫스레드 등록
 thread_init (void) {
 	ASSERT (intr_get_level () == INTR_OFF);
 
@@ -105,16 +104,17 @@ thread_init (void) {
 	};
 	lgdt (&gdt_ds);
 
-	/* Init the globla thread context */
-	lock_init (&tid_lock);
-	list_init (&ready_list);
-	list_init (&destruction_req);
+	/* Init the global thread context */
+	// 전역 쓰레드 자료구조 초기화
+	lock_init (&tid_lock);         // tid 할당 보호용 락
+	list_init (&ready_list);       // 실행 대기용 스레드 큐
+	list_init (&destruction_req);  // 종료됬지만 아직 메모리 해제 안된 스레드 목록
 
 	/* Set up a thread structure for the running thread. */
-	initial_thread = running_thread ();
-	init_thread (initial_thread, "main", PRI_DEFAULT);
+	initial_thread = running_thread (); // 현재 스레드 struct thread 주소 받아옴
+	init_thread (initial_thread, "main", PRI_DEFAULT); 
 	initial_thread->status = THREAD_RUNNING;
-	initial_thread->tid = allocate_tid ();
+	initial_thread->tid = allocate_tid (); // tid 부여(첫스레드라 1)
 }
 
 /* Starts preemptive thread scheduling by enabling interrupts.
@@ -260,7 +260,7 @@ struct thread *
 thread_current (void) {
 	struct thread *t = running_thread ();
 
-	/* Make sure T is really a thread.
+	/* Make sure T is really ㅎa thread.
 	   If either of these assertions fire, then your thread may
 	   have overflowed its stack.  Each thread has less than 4 kB
 	   of stack, so a few big automatic arrays or moderate

@@ -80,18 +80,18 @@ test_sleep (int thread_cnt, int iterations)
   /* Start threads. */
   ASSERT (output != NULL);
   for (i = 0; i < thread_cnt; i++)
-    {
-      struct sleep_thread *t = threads + i;
-      char name[16];
-      
-      t->test = &test;
-      t->id = i;
-      t->duration = (i + 1) * 10;
-      t->iterations = 0;
+  {
+    struct sleep_thread *t = threads + i;
+    char name[16];
+    
+    t->test = &test;
+    t->id = i;
+    t->duration = (i + 1) * 10;
+    t->iterations = 0;
 
-      snprintf (name, sizeof name, "thread %d", i);
-      thread_create (name, PRI_DEFAULT, sleeper, t);
-    }
+    snprintf (name, sizeof name, "thread %d", i);
+    thread_create (name, PRI_DEFAULT, sleeper, t);
+  }
   
   /* Wait long enough for all the threads to finish. */
   timer_sleep (100 + thread_cnt * iterations * 10 + 100);

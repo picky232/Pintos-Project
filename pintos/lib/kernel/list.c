@@ -354,6 +354,7 @@ find_end_of_run (struct list_elem *a, struct list_elem *b,
    (exclusive).  Both input ranges must be nonempty and sorted in
    nondecreasing order according to LESS given auxiliary data
    AUX.  The output range will be sorted the same way. */
+// 정렬된 두 리스트 합쳐주는 함수
 static void
 inplace_merge (struct list_elem *a0, struct list_elem *a1b0,
 		struct list_elem *b1,
@@ -398,13 +399,13 @@ list_sort (struct list *list, list_less_func *less, void *aux) {
 
 			/* Locate two adjacent runs of nondecreasing elements
 			   A0...A1B0 and A1B0...B1. */
-			a1b0 = find_end_of_run (a0, list_end (list), less, aux);
-			if (a1b0 == list_end (list))
+			a1b0 = find_end_of_run (a0, list_end (list), less, aux);// 정렬이 유지되는 구간의 끝을 찾음
+			if (a1b0 == list_end (list)) // 리스트의 미지막과 같으면 깨짐
 				break;
-			b1 = find_end_of_run (a1b0, list_end (list), less, aux);
+			b1 = find_end_of_run (a1b0, list_end (list), less, aux); // 나눈 두번째 배열에서 정렬이 유지되는 구간의 끝을 찾음
 
 			/* Merge the runs. */
-			inplace_merge (a0, a1b0, b1, less, aux);
+			inplace_merge (a0, a1b0, b1, less, aux); // 
 		}
 	}
 	while (output_run_cnt > 1);

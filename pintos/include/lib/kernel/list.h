@@ -90,7 +90,7 @@ struct list_elem {
 };
 
 /* List. */
-struct list {
+struct list { 
 	struct list_elem head;      /* List head. */
 	struct list_elem tail;      /* List tail. */
 };
@@ -100,46 +100,46 @@ struct list {
    name of the outer structure STRUCT and the member name MEMBER
    of the list element.  See the big comment at the top of the
    file for an example. */
+// e를 가지고있는 thread struct의 시작주소 반환
 #define list_entry(LIST_ELEM, STRUCT, MEMBER)           \
 	((STRUCT *) ((uint8_t *) &(LIST_ELEM)->next     \
 		- offsetof (STRUCT, MEMBER.next)))
 
-void list_init (struct list *);
+void list_init (struct list *); // 리스트 생성(초기화)
 
 /* List traversal. */
-struct list_elem *list_begin (struct list *);
-struct list_elem *list_next (struct list_elem *);
-struct list_elem *list_end (struct list *);
+struct list_elem *list_begin (struct list *); // 헤드(센티널)의 다음노드인 리스트의 시작 원소
+struct list_elem *list_next (struct list_elem *); // 다음 원소
+struct list_elem *list_end (struct list *); // 리스트 끝 표시
 
-struct list_elem *list_rbegin (struct list *);
-struct list_elem *list_prev (struct list_elem *);
-struct list_elem *list_rend (struct list *);
+struct list_elem *list_rbegin (struct list *); //역방향 시작점 마지막 원소의 prev
+struct list_elem *list_prev (struct list_elem *); // 이전 노드
+struct list_elem *list_rend (struct list *); // 역방향 끝 표시
 
-struct list_elem *list_head (struct list *);
-struct list_elem *list_tail (struct list *);
+struct list_elem *list_head (struct list *); // 리스트 헤드(센티널)
+struct list_elem *list_tail (struct list *); // 리스트 테일(센티널)
 
 /* List insertion. */
-void list_insert (struct list_elem *, struct list_elem *);
-void list_splice (struct list_elem *before,
-		struct list_elem *first, struct list_elem *last);
-void list_push_front (struct list *, struct list_elem *);
-void list_push_back (struct list *, struct list_elem *);
+void list_insert (struct list_elem *, struct list_elem *); // elem를 before 바로 앞에 끼워넣음
+void list_splice (struct list_elem *before, struct list_elem *first, struct list_elem *last); // 다른 리스트에서 first부터 last까지의 구간을 떼어서 before 앞에 붙임
+void list_push_front (struct list *, struct list_elem *); // 맨 앞에 삽입
+void list_push_back (struct list *, struct list_elem *); // 맨 뒤에 삽입
 
 /* List removal. */
-struct list_elem *list_remove (struct list_elem *);
-struct list_elem *list_pop_front (struct list *);
-struct list_elem *list_pop_back (struct list *);
+struct list_elem *list_remove (struct list_elem *); // 특정 원소 리스트에서 뺌
+struct list_elem *list_pop_front (struct list *); // 맨 앞에 원소를 뺴냄
+struct list_elem *list_pop_back (struct list *); // 맨 뒤에 원소를 빼냄
 
 /* List elements. */
-struct list_elem *list_front (struct list *);
-struct list_elem *list_back (struct list *);
+struct list_elem *list_front (struct list *); // 맨 앞 원소
+struct list_elem *list_back (struct list *); // 맨 뒤 원소
 
 /* List properties. */
-size_t list_size (struct list *);
-bool list_empty (struct list *);
+size_t list_size (struct list *); // 리스트안 원소 개수 확인
+bool list_empty (struct list *); // 리스트가 비었는지 확인
 
 /* Miscellaneous. */
-void list_reverse (struct list *);
+void list_reverse (struct list *); // 리스트 뒤집기
 
 /* Compares the value of two list elements A and B, given
    auxiliary data AUX.  Returns true if A is less than B, or

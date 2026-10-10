@@ -20,8 +20,8 @@ enum thread_status {
 
 /* Thread identifier type.
    You can redefine this to whatever type you like. */
-typedef int tid_t;
-#define TID_ERROR ((tid_t) -1)          /* Error value for tid_t. */
+typedef int tid_t; // int에 tid_t라는 별칭(alias) 부여 (thread id)
+#define TID_ERROR ((tid_t) -1)          /* Error value for tid_t. 스레드 생성실패시 반환하는 에러값*/
 
 /* Thread priorities. */
 #define PRI_MIN 0                       /* Lowest priority. */
@@ -92,6 +92,8 @@ struct thread {
 	char name[16];                      /* Name (for debugging purposes). */
 	int priority;                       /* Priority. */
 
+	int64_t wake_tick;					// 깨워야 할 시간
+
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
 
@@ -112,10 +114,10 @@ struct thread {
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
    Controlled by kernel command-line option "-o mlfqs". */
-extern bool thread_mlfqs;
+extern bool thread_mlfqs; // 스케쥴러 종류를 고르는 전역 스위치
 
-void thread_init (void);
-void thread_start (void);
+void thread_init (void);  // 스레드 초기화 - 첫 스레드 등록
+void thread_start (void); // 
 
 void thread_tick (void);
 void thread_print_stats (void);
