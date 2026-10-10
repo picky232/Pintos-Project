@@ -1,15 +1,15 @@
 #ifndef THREADS_INTR_STUBS_H
 #define THREADS_INTR_STUBS_H
 
-/* Interrupt stubs.
+/* 인터럽트 스텁(stub).
  *
- * These are little snippets of code in intr-stubs.S, one for
- * each of the 256 possible x86 interrupts.  Each one does a
- * little bit of stack manipulation, then jumps to intr_entry().
- * See intr-stubs.S for more information.
+ * intr-stubs.S에 있는 작은 코드 조각들로, x86이 낼 수 있는 256개
+ * 인터럽트마다 하나씩 있음. 각 스텁은 스택을 조금 조작한 뒤
+ * intr_entry()로 점프함.
+ * 자세한 내용은 intr-stubs.S를 볼 것.
  *
- * This array points to each of the interrupt stub entry points
- * so that intr_init() can easily find them. */
+ * 이 배열은 각 인터럽트 스텁의 진입점을 가리키며,
+ * intr_init()이 쉽게 찾을 수 있게 하기 위한 것임. */
 typedef void intr_stub_func (void);
 extern intr_stub_func *intr_stubs[256];
 

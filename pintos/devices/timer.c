@@ -93,8 +93,9 @@ timer_elapsed (int64_t then) {
 }
 
 bool 
-find_sleep_list (const struct list_elem *a, const struct list_elem *b, void *aux)
+wake_tick_less (const struct list_elem *a, const struct list_elem *b, void *aux)
 {
+
 	return true;
 }
 
@@ -112,8 +113,9 @@ timer_sleep (int64_t sleep_ticks) {
 	enum intr_level old = intr_disable(); // 임계 구역 시작
 	struct thread *cur_thread = thread_current();
 	list_push_back(&sleep_list, &(cur_thread->elem));
-	thread_block();
 	cur_thread->wake_tick = sleep_ticks + ticks;
+	thread_block(); // 다시 실행하면 여기서 부터 실행됨
+	
 	intr_set_level(old); // 임계 구역 끝
 }
 
