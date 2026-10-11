@@ -40,6 +40,9 @@ static struct lock tid_lock;
 /* 스레드 제거 요청 */
 static struct list destruction_req;
 
+/* sleep 스레드 리스트 */
+static struct list sleep_list; 
+
 /* 통계. */
 static long long idle_ticks;    /* idle 상태로 보낸 타이머 틱 수. */
 static long long kernel_ticks;  /* 커널 스레드에서 보낸 타이머 틱 수. */
@@ -78,6 +81,8 @@ static tid_t allocate_tid (void);
 // 먼저 임시 gdt를 설정해야 함.
 static uint64_t gdt[3] = { 0, 0x00af9a000000ffff, 0x00cf92000000ffff };
 
+
+
 /* 지금 실행 중인 코드를 스레드로 변환해서 스레딩 시스템을
    초기화함. 이것은 일반적으로는 불가능하고, 이 경우에만
    가능한 이유는 loader.S가 스택의 바닥을
@@ -109,12 +114,71 @@ thread_init (void) {
 	lock_init (&tid_lock);         // tid 할당 보호용 락
 	list_init (&ready_list);       // 실행 대기용 스레드 큐
 	list_init (&destruction_req);  // 종료됬지만 아직 메모리 해제 안된 스레드 목록
+	/* sleep_list 초기화 */
+	list_init(&sleep_list);
 
 	/* 실행 중인 스레드용 스레드 구조체를 설정함. */
 	initial_thread = running_thread (); // 현재 스레드 struct thread 주소 받아옴
 	init_thread (initial_thread, "main", PRI_DEFAULT); 
 	initial_thread->status = THREAD_RUNNING;
 	initial_thread->tid = allocate_tid (); // tid 부여(첫스레드라 1)
+}
+
+/* 현재 스레드를 sleep_list에 넣고 block상태로 바꿔줌 timer_sleep에서 사용됨 */
+void
+thread_sleep (int64_t wake_up_ticks)
+{
+	struct thread *t = thread_current();
+
+	if(t==idle_thread)
+		return;
+
+	enum intr_level old = intr_disable();
+	t->wake_tick = wake_up_ticks;
+	list_insert_ordered(&sleep_list, &(t->elem), wake_tick_less, NULL);
+	thread_block();
+	intr_set_level(old);
+}
+
+/* wake_tick이 더 작은지 큰지 판단하는 함수 sleep_list에 넣을때 정렬해서 넣기 위해 필요함. */
+bool 
+wake_tick_less (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+	struct thread *small_a = list_entry(a, struct thread, elem);
+	struct thread *big_b = list_entry(b, struct thread, elem);
+
+	/* wake_tick 비교 */
+	if ( small_a->wake_tick < big_b->wake_tick )
+		return true;
+	else if ( small_a->wake_tick > big_b->wake_tick )
+		return false;
+	
+	/* 우선순위 비교 */
+	if ( small_a->priority > big_b->priority )
+		return true;
+	else if ( small_a->priority < big_b->priority )
+		return false;
+	/* 전부 같으면 false를 반환해야 순서가 보존되지 않음 */
+	return false;
+}
+
+/* sleep_list에서 일어날 시간이된 스레드를 깨워주는 함수 - timer_interrupt에서 사용함 */
+void
+thread_wake_up(int64_t ticks)
+{
+	/* 맨앞 원소 */
+	struct list_elem *e = list_begin(&sleep_list);
+	/* sleep_list있는 스레드가 깨어날 시간이 모두 똑같을 경우를 생각해서 순회 */
+	while(!list_empty(&sleep_list)){
+		struct thread *t = list_entry(e, struct thread, elem);
+		/* sleep_lis는 정렬되어있음으로 현재 tick 보다 wake_tick이 더크면 종료 */
+		if( t->wake_tick > ticks ){
+			break;
+		}
+		/* sleep_list에서 추출 */
+		e = list_remove(e);
+		thread_unblock(t);
+	}
 }
 
 /* 인터럽트를 켜서 선점형 스레드 스케줄링을 시작함.

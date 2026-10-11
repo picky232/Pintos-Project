@@ -145,4 +145,11 @@ int thread_get_load_avg (void);
 
 void do_iret (struct intr_frame *tf);
 
+/* 현재 스레드를 sleep_list에 넣고 block상태로 바꿔줌 timer_sleep에서 사용됨 */
+void thread_sleep (int64_t wake_up_ticks);
+/* wake_tick이 더 작은지 큰지 판단하는 함수 sleep_list에 넣을때 정렬해서 넣기 위해 필요함. */
+bool wake_tick_less (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+/* sleep_list에서 일어날 시간이된 스레드를 깨워주는 함수 - timer_interrupt에서 사용함 */
+void thread_wake_up(int64_t ticks);
+
 #endif /* threads/thread.h */

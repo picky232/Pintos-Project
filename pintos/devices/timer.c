@@ -20,8 +20,6 @@
 /* OS가 부팅한 뒤의 타이머 틱 수. */
 static int64_t ticks; // 부팅후 지난 틱 수
 
-static struct list sleep_list; // sleep 스레드 리스트
-
 /* 타이머 틱당 루프 횟수.
    timer_calibrate()가 초기화함. */
 static unsigned loops_per_tick; 
@@ -43,8 +41,6 @@ timer_init (void) {
 	outb (0x43, 0x34);    /* CW: 카운터 0, LSB 다음 MSB, 모드 2, 이진수. */
 	outb (0x40, count & 0xff);
 	outb (0x40, count >> 8);
-
-	list_init(&sleep_list); // sleep list 초기화
 
 	intr_register_ext (0x20, timer_interrupt, "8254 Timer"); // 인터럽트 핸들러 등록
 }
@@ -92,17 +88,7 @@ timer_elapsed (int64_t then) {
 	return timer_ticks () - then;
 }
 
-bool 
-wake_tick_less (const struct list_elem *a, const struct list_elem *b, void *aux)
-{
-	
-	return true;
-}
-
 /* 약 TICKS 타이머 틱 동안 실행을 멈춤. */
-// 
-
-// 고쳐야 산다 못고치면 죽는다 
 void // 몇 틱 잘껀지
 timer_sleep (int64_t sleep_ticks) {
 	int64_t start = timer_ticks ();
@@ -110,14 +96,7 @@ timer_sleep (int64_t sleep_ticks) {
 	ASSERT (intr_get_level () == INTR_ON);
 	
 	if(sleep_ticks<=0) return;
-	/* sleep list는 타이머 인터럽트도 읽음으로, 고치는 동안 인터럽트를 막는다 */
-	enum intr_level old = intr_disable(); // 임계 구역 시작
-	struct thread *cur_thread = thread_current();
-	list_push_back(&sleep_list, &(cur_thread->elem));
-	cur_thread->wake_tick = sleep_ticks + ticks;
-	thread_block(); // 다시 실행하면 여기서 부터 실행됨
-	
-	intr_set_level(old); // 임계 구역 끝
+	thread_sleep(start+sleep_ticks);
 }
 
 /* 약 MS 밀리초 동안 실행을 멈춤. */
@@ -150,7 +129,7 @@ timer_print_stats (void) {
 static void 
 timer_interrupt (struct intr_frame *args UNUSED) {
 	ticks++;
-	
+	thread_wake_up(ticks);
 	thread_tick (); 
 }
 
