@@ -28,6 +28,9 @@
    that are ready to run but not actually running. */
 static struct list ready_list;
 
+/* block 한 스레드 리스트 */
+static struct list sleep_list;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -62,6 +65,60 @@ static void init_thread (struct thread *, const char *name, int priority);
 static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
+
+/* 현재 스레드를 sleep_list에 넣고 block상태로 바꿔줌 timer_sleep에서 사용됨 */
+void
+thread_sleep (int64_t wake_up_ticks)
+{
+	struct thread *t = thread_current();
+	enum intr_level old = intr_disable();
+	t->wake_ticks = wake_up_ticks;
+	list_insert_ordered(&sleep_list, &(t->elem), check_thread_less, NULL);
+	thread_block();
+	intr_set_level(old);
+}
+
+/* wake_tick이 더 작은지 큰지 판단하는 함수 sleep_list에 넣을때 정렬해서 넣기 위해 필요함. */
+bool 
+check_thread_less (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+	struct thread *small_a = list_entry(a, struct thread, elem);
+	struct thread *big_b = list_entry(b, struct thread, elem);
+
+	/* wake_tick 비교 */
+	if ( small_a->wake_ticks < big_b->wake_ticks )
+		return true;
+	else if ( small_a->wake_ticks > big_b->wake_ticks )
+		return false;
+	
+	/* 우선순위 비교 */
+	if ( small_a->priority > big_b->priority )
+		return true;
+	else if ( small_a->priority < big_b->priority )
+		return false;
+	/* 전부 같으면 false를 반환해야 순서가 보존되지 않음 */
+	return false;
+}
+
+/* sleep_list에서 일어날 시간이된 스레드를 깨워주는 함수 - timer_interrupt에서 사용함 */
+void
+thread_wake_up(int64_t ticks)
+{
+	/* 맨앞 원소 */
+	struct list_elem *e = list_begin(&sleep_list);
+	/* sleep_list있는 스레드가 깨어날 시간이 모두 똑같을 경우를 생각해서 순회 */
+	while(!list_empty(&sleep_list)){
+		struct thread *t = list_entry(e, struct thread, elem);
+		/* sleep_lis는 정렬되어있음으로 현재 tick 보다 wake_tick이 더크면 종료 */
+		if( t->wake_ticks > ticks ){
+			break;
+		}
+		/* sleep_list에서 추출 */
+		e = list_remove(e);
+		thread_unblock(t);
+	}
+}
+
 
 /* Returns true if T appears to point to a valid thread. */
 #define is_thread(t) ((t) != NULL && (t)->magic == THREAD_MAGIC)
@@ -109,6 +166,7 @@ thread_init (void) {
 	lock_init (&tid_lock);
 	list_init (&ready_list);
 	list_init (&destruction_req);
+	list_init (&sleep_list); /* sleep_list 초기화 */
 
 	/* Set up a thread structure for the running thread. */
 	initial_thread = running_thread ();

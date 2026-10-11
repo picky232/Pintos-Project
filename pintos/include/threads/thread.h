@@ -95,6 +95,7 @@ struct thread {
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
 
+	int64_t wake_ticks;					/* 깨울 시간 (절대시간) */
 #ifdef USERPROG
 	/* Owned by userprog/process.c. */
 	uint64_t *pml4;                     /* Page map level 4 */
@@ -142,5 +143,14 @@ int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
 
 void do_iret (struct intr_frame *tf);
+
+/* 현재 스레드를 sleep_list에 넣고 block상태로 바꿔줌 timer_sleep에서 사용됨 */
+void thread_sleep (int64_t sleep_ticks);
+
+/* sleep_list에서 일어날 시간이된 스레드를 깨워주는 함수 - timer_interrupt에서 사용함 */
+void thread_wake_up (int64_t ticks);
+
+/* wake_tick이 더 작은지 큰지 판단하는 함수 sleep_list에 넣을때 정렬해서 넣기 위해 필요함. */
+bool check_thread_less (const struct list_elem *a, const struct list_elem *b, void *aux);
 
 #endif /* threads/thread.h */
