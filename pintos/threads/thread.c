@@ -81,7 +81,26 @@ static tid_t allocate_tid (void);
 // 먼저 임시 gdt를 설정해야 함.
 static uint64_t gdt[3] = { 0, 0x00af9a000000ffff, 0x00cf92000000ffff };
 
+/* ready_list 정렬을 우선순위에 따라 맞추도록 돕는 함수 */
+bool thread_priority_greater(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+	struct thread *at = list_entry(a, struct thread, elem);
+	struct thread *bt = list_entry(b, struct thread, elem);
+	/* 우선순위 확인 */
+	if ( at->priority > bt->priority )
+		return true;
+	return false;
+}
 
+/* 스레드 우선순위 확인 후 스위칭 */
+void
+thread_priority_switch (void) {
+    if (!list_empty (&ready_list)) {
+        struct thread *rt = list_entry (list_begin (&ready_list), struct thread, elem);
+        if (thread_current ()->priority < rt->priority)
+            thread_yield ();
+    }
+}
 
 /* 지금 실행 중인 코드를 스레드로 변환해서 스레딩 시스템을
    초기화함. 이것은 일반적으로는 불가능하고, 이 경우에만
@@ -178,6 +197,8 @@ thread_wake_up(int64_t ticks)
 		/* sleep_list에서 추출 */
 		e = list_remove(e);
 		thread_unblock(t);
+		/* 깨어난 스레드의 우선순위가 더 높으면 바로 스위칭 */
+		thread_priority_switch();
 	}
 }
 
@@ -271,7 +292,8 @@ thread_create (const char *name, int priority,
 
 	/* 실행 큐에 추가함. */
 	thread_unblock (t);
-
+	/* 스레드 우선순위를 확인후 ready_list의 스레드가 우선순위가 높으면 스위칭 */
+	thread_priority_switch();
 	return tid;
 }
 
@@ -305,7 +327,7 @@ thread_unblock (struct thread *t) {
 
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
-	list_push_back (&ready_list, &t->elem);
+	list_insert_ordered (&ready_list, &t->elem, thread_priority_greater, NULL);
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
 }
@@ -369,7 +391,8 @@ thread_yield (void) {
 
 	old_level = intr_disable ();
 	if (curr != idle_thread)
-		list_push_back (&ready_list, &curr->elem);
+		/* 정렬된 순서로 레디 리스트에 들어가도록 수정 */
+		list_insert_ordered(&ready_list, &curr->elem, thread_priority_greater, NULL);
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 }

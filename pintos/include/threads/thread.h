@@ -152,4 +152,9 @@ bool wake_tick_less (const struct list_elem *a, const struct list_elem *b, void 
 /* sleep_list에서 일어날 시간이된 스레드를 깨워주는 함수 - timer_interrupt에서 사용함 */
 void thread_wake_up(int64_t ticks);
 
+/* ready_list 정렬을 우선순위에 따라 맞추도록 돕는 함수 */
+bool thread_priority_greater(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+/* 스레드 우선순위 확인 후 스위칭 */
+void thread_priority_switch (void);
+
 #endif /* threads/thread.h */
