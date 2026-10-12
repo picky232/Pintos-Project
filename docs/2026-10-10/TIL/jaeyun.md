@@ -1,0 +1,56 @@
+[1. 부팅할 때 세팅]
+│
+├─ threads/thread.h (struct thread)
+│  └─ 스레드 설계도 몸통에 wakeup_tick 변수 칸 뚫어둠
+│
+├─ devices/timer.c (timer_init 함수)
+│  └─ list_init(&sleep_list)
+│     └─ 잠든 놈들 모아둘 빨랫줄(sleep_list) 깔아서 초기화함
+│
+└─ threads/thread.c (init_thread 함수)
+   └─ t->wakeup_tick = 0
+      └─ 스레드 새로 태어날 때마다 기상 시각 칸 일단 0으로 밀어둠
+
+
+[2. 스레드가 timer_sleep(ticks) 부름 (잠들러 감)]
+│
+├─ devices/timer.c (timer_sleep 함수)
+│  │
+│  ├─ if (ticks <= 0) return;
+│  │  └─ 잘 시간 0 이하면 잘 필요 없으니 바로 함수 끝냄
+│  │
+│  ├─ int64_t wake_time = start + ticks;
+│  │  └─ timer_ticks()로 얻은 현재 시각(start)에 ticks 더해서 기상 시각 계산함
+│  │
+│  ├─ threads/thread.c (thread_current 함수)
+│  │  └─ 지금 CPU 잡고 돌고 있는 스레드 포인터(t) 던져줌 (return t)
+│  │
+│  ├─ t->wakeup_tick = wake_time;
+│  │  └─ 받아온 스레드 몸통의 wakeup_tick 칸에 방금 계산한 기상 시각 박아둠
+│  │
+│  ├─ threads/interrupt.c (intr_disable 함수)
+│  │  └─ enum intr_level old_level = intr_disable();
+│  │     └─ 인터럽트 스위치 OFF로 끄고, 끄기 직전 상태(ON)를 old_level 상자에 보관함
+│  │
+│  ├─ lib/kernel/list.c (list_push_back 함수)
+│  │  └─ list_push_back(&sleep_list, &t->elem);
+│  │     └─ timer_init 때 깔아둔 sleep_list에 현재 스레드의 elem 고리 걸어서 줄 세움
+│  │
+│  └─ threads/thread.c (thread_block 함수)
+│     └─ thread_block();
+│        ├─ 스레드 상태를 THREAD_BLOCKED(대기)로 바꿈
+│        ├─ schedule() 불러서 다른 스레드한테 CPU 넘겨줌
+│        └─ ★ 스레드 여기서 그대로 일시정지 걸려서 얼어붙음 (코드 멈춤) ★
+
+
+[3. 시간이 흘러 스레드가 깨어남 (뒷정리)]
+│
+│  (나중에 timer_interrupt가 깨워줘서 스레드가 다시 CPU 잡음)
+│
+└─ devices/timer.c (timer_sleep 함수 내부 - 멈췄던 지점 바로 다음 줄)
+   │
+   ├─ threads/interrupt.c (intr_set_level 함수)
+   │  └─ intr_set_level(old_level);
+   │     └─ 얼어붙기 전에 챙겨둔 old_level(ON) 넘겨서 인터럽트 스위치 다시 켬
+   │
+   └─ timer_sleep 함수 완전히 빠져나가고 스레드 원래 하던 일 계속함
