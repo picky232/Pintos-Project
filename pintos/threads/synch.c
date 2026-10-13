@@ -294,10 +294,7 @@ cond_wait (struct condition *cond, struct lock *lock) {
 	lock_acquire (lock);
 }
 
-/* 
-	cond -> waiter -> semaphore_elem의 elem(list_elem) -> semaphore->waiter의 elem(list_elem)으로 스레드에 접근해서
-	스레드의 우선순위를 확인하고 이에 맞춰서 semaphore_elem를 정렬하기 위해 a, b를 비교하는 함수
-*/
+/* condition->waiter에 세마포어 원소를 정렬해서 넣음 */
 bool
 sema_priority_greaterc( const struct list_elem *a, const struct list_elem *b, void *aux)
 {
