@@ -65,8 +65,9 @@ sema_down (struct semaphore *sema) {
 	ASSERT (!intr_context ());
 
 	old_level = intr_disable ();
+	/* 세마 value가 0이면 block된 상태여서 멈춰있다가 unblock되면 세마 value가 0이 아니게 되며 조건이 깨짐 */
 	while (sema->value == 0) {
-		list_push_back (&sema->waiters, &thread_current ()->elem);
+		list_insert_ordered (&sema->waiters, &thread_current ()->elem, thread_priority_greater, NULL);
 		thread_block ();
 	}
 	sema->value--;
@@ -113,6 +114,8 @@ sema_up (struct semaphore *sema) {
 		thread_unblock (list_entry (list_pop_front (&sema->waiters),
 					struct thread, elem));
 	sema->value++;
+	/* 세마 반환후 스위칭 */
+	thread_priority_switch();
 	intr_set_level (old_level);
 }
 
@@ -240,6 +243,7 @@ lock_held_by_current_thread (const struct lock *lock) {
 struct semaphore_elem {
 	struct list_elem elem;              /* List element. */
 	struct semaphore semaphore;         /* This semaphore. */
+	struct thread *holder;				/* 스레드 필드 추가(컨디션에서 우선순위 비교를 위해) */
 };
 
 /* Initializes condition variable COND.  A condition variable
@@ -282,7 +286,9 @@ cond_wait (struct condition *cond, struct lock *lock) {
 	ASSERT (lock_held_by_current_thread (lock));
 
 	sema_init (&waiter.semaphore, 0);
-	list_push_back (&cond->waiters, &waiter.elem);
+	waiter.holder = thread_current();
+	/* condition->waiter에 세마포어 엘리멘탈을 우선순위를 비교하여 정렬된 상태로 넣어줌 */
+	list_insert_ordered (&cond->waiters, &waiter.elem, sema_priority_greater, NULL);
 	lock_release (lock);
 	sema_down (&waiter.semaphore);
 	lock_acquire (lock);
@@ -305,6 +311,18 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED) {
 	if (!list_empty (&cond->waiters))
 		sema_up (&list_entry (list_pop_front (&cond->waiters),
 					struct semaphore_elem, elem)->semaphore);
+}
+
+/* 컨디션 구조체에 waiter 필드에 우선순위대로 정렬하도록 도와주는 함수 */
+bool
+sema_priority_greaterc( const struct list_elem *a, const struct list_elem *b, void *aux)
+{
+	struct semaphore_elem *sa = list_entry(a, struct semaphore_elem, elem);
+	struct semaphore_elem *sb = list_entry(b, struct semaphore_elem, elem);
+	
+	if (sa->holder->priority > sb->holder->priority)
+		return true;
+	return false;
 }
 
 /* Wakes up all threads, if any, waiting on COND (protected by

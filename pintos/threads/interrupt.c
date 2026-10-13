@@ -370,7 +370,7 @@ intr_handler (struct intr_frame *frame) {
 		pic_end_of_interrupt (frame->vec_no);
 
 		if (yield_on_return)
-			thread_yield ();
+			thread_yield (); // 외부 인터럽트 핸들러가 끝나면 양보 플래그 확인후 처리
 	}
 }
 
