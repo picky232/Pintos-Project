@@ -66,6 +66,30 @@ static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
 
+/* ready_list 정렬을 우선순위에 따라 맞추도록 돕는 함수 */
+bool thread_priority_greater(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+	struct thread *at = list_entry(a, struct thread, elem);
+	struct thread *bt = list_entry(b, struct thread, elem);
+	/* 우선순위 확인 */
+	if ( at->priority > bt->priority )
+		return true;
+	return false;
+}
+
+/* 스레드 우선순위 확인 후 스위칭 */
+void
+thread_priority_switch (void) {
+	enum intr_level old = intr_disable();
+    if (!list_empty (&ready_list)) {
+        struct thread *rt = list_entry (list_begin (&ready_list), struct thread, elem);
+        if (thread_current ()->priority < rt->priority)
+			if (intr_context()) intr_yield_on_return();
+            else thread_yield ();
+    }
+	intr_set_level(old);
+}
+
 /* 현재 스레드를 sleep_list에 넣고 block상태로 바꿔줌 timer_sleep에서 사용됨 */
 void
 thread_sleep (int64_t wake_up_ticks)
@@ -116,6 +140,8 @@ thread_wake_up(int64_t ticks)
 		/* sleep_list에서 추출 */
 		e = list_remove(e);
 		thread_unblock(t);
+		/* 깨어난 스레드의 우선순위가 더 높으면 바로 스위칭 */
+		thread_priority_switch();
 	}
 }
 
@@ -264,6 +290,9 @@ thread_create (const char *name, int priority,
 
 	/* Add to run queue. */
 	thread_unblock (t);
+	
+	/* 깨어난 스레드의 우선순위가 더 높으면 바로 스위칭 */
+	thread_priority_switch();
 
 	return tid;
 }
@@ -298,7 +327,8 @@ thread_unblock (struct thread *t) {
 
 	old_level = intr_disable ();
 	ASSERT (t->status == THREAD_BLOCKED);
-	list_push_back (&ready_list, &t->elem);
+	/* 정렬된 상태로 ready_list에 정렬 */
+	list_insert_ordered (&ready_list, &t->elem, thread_priority_greater, NULL);
 	t->status = THREAD_READY;
 	intr_set_level (old_level);
 }
@@ -370,6 +400,8 @@ thread_yield (void) {
 void
 thread_set_priority (int new_priority) {
 	thread_current ()->priority = new_priority;
+	/* 우선순위가 낮아지면 바꿈 */
+	thread_priority_switch();
 }
 
 /* Returns the current thread's priority. */
