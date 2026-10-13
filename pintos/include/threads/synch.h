@@ -39,7 +39,7 @@ void cond_signal (struct condition *, struct lock *);
 void cond_broadcast (struct condition *, struct lock *);
 
 /* 컨디션에 waiter에 세마포어 원소 우선순위대로 정렬 */
-bool sema_priority_greater(struct list_elem *a, struct list_elem *b, void *aux);
+bool sema_priority_greater(const struct list_elem *a, const struct list_elem *b, void *aux);
 
 /* Optimization barrier.
  *

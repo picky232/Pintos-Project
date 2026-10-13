@@ -191,6 +191,14 @@ lock_acquire (struct lock *lock) {
 	ASSERT (!intr_context ());
 	ASSERT (!lock_held_by_current_thread (lock));
 
+	/* 락 주인보다 내 우선순위가 높으면,
+    락 주인의 우선순위를 내 값으로 올린다 (기부). */
+	if (lock->holder != NULL){
+		if (thread_current()->priority > lock->holder->priority){
+			lock->holder->priority = thread_current()->priority;
+		}
+	}
+
 	sema_down (&lock->semaphore);
 	lock->holder = thread_current ();
 }
@@ -225,6 +233,8 @@ lock_release (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
 
+	/* 현재 스레드의 priority를 init_priority로 */
+	thread_current()->priority = thread_current()->init_priority;
 	lock->holder = NULL;
 	sema_up (&lock->semaphore);
 }
@@ -315,7 +325,7 @@ cond_signal (struct condition *cond, struct lock *lock UNUSED) {
 
 /* 컨디션 구조체에 waiter 필드에 우선순위대로 정렬하도록 도와주는 함수 */
 bool
-sema_priority_greaterc( const struct list_elem *a, const struct list_elem *b, void *aux)
+sema_priority_greater ( const struct list_elem *a, const struct list_elem *b, void *aux)
 {
 	struct semaphore_elem *sa = list_entry(a, struct semaphore_elem, elem);
 	struct semaphore_elem *sb = list_entry(b, struct semaphore_elem, elem);
