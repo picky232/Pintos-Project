@@ -65,8 +65,10 @@ sema_down (struct semaphore *sema) {
 	ASSERT (!intr_context ());
 
 	old_level = intr_disable ();
+	/* 세마 value가 0이면 block된 상태여서 멈춰있다가 unblock되면 세마 value가 0이 아니게 되며 조건이 깨짐 */
 	while (sema->value == 0) {
-		list_insert_ordered (&sema->waiters, &thread_current ()->elem, thread_priority_greater, NULL);
+		/* sema waiter 스레드 정렬 삽입 */
+		list_insert_ordered (&sema->waiters, &thread_current()->elem, thread_priority_greater, NULL);
 		thread_block ();
 	}
 	sema->value--;
@@ -113,6 +115,8 @@ sema_up (struct semaphore *sema) {
 		thread_unblock (list_entry (list_pop_front (&sema->waiters),
 					struct thread, elem));
 	sema->value++;
+	/* 세마 반환후 스위칭 */
+	thread_priority_switch();
 	intr_set_level (old_level);
 }
 
@@ -240,6 +244,7 @@ lock_held_by_current_thread (const struct lock *lock) {
 struct semaphore_elem {
 	struct list_elem elem;              /* 리스트 원소. */
 	struct semaphore semaphore;         /* 이 세마포어. */
+	struct thread *holder;				/* 스레드 필드 추가 (컨디션에서 우선순위 비교를 위해) */
 };
 
 /* 컨디션 변수 COND를 초기화함. 컨디션 변수는 한 코드 조각이
@@ -280,14 +285,29 @@ cond_wait (struct condition *cond, struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (!intr_context ());
 	ASSERT (lock_held_by_current_thread (lock));
-
+	/* 아직 신호가 오지 않은 상태(0)로 시작함. cond_signal이 sema_up하기 전까지 sema_down에서 잠듦 */
 	sema_init (&waiter.semaphore, 0);
-	list_push_back (&cond->waiters, &waiter.elem);
+	waiter.holder = thread_current();
+	list_insert_ordered (&cond->waiters, &waiter.elem, sema_priority_greater, NULL);
 	lock_release (lock);
 	sema_down (&waiter.semaphore);
 	lock_acquire (lock);
 }
 
+/* 
+	cond -> waiter -> semaphore_elem의 elem(list_elem) -> semaphore->waiter의 elem(list_elem)으로 스레드에 접근해서
+	스레드의 우선순위를 확인하고 이에 맞춰서 semaphore_elem를 정렬하기 위해 a, b를 비교하는 함수
+*/
+bool
+sema_priority_greaterc( const struct list_elem *a, const struct list_elem *b, void *aux)
+{
+	struct semaphore_elem *sa = list_entry(a, struct semaphore_elem, elem);
+	struct semaphore_elem *sb = list_entry(b, struct semaphore_elem, elem);
+	
+	if (sa->holder->priority > sb->holder->priority)
+		return true;
+	return false;
+}
 /* COND를 기다리는 스레드가 있으면(LOCK으로 보호됨),
    그중 하나에게 신호를 보내 기다림에서 깨어나게 함.
    이 함수를 호출하기 전에 LOCK을 쥐고 있어야 함.

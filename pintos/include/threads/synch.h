@@ -38,6 +38,11 @@ void cond_wait (struct condition *, struct lock *);
 void cond_signal (struct condition *, struct lock *);
 void cond_broadcast (struct condition *, struct lock *);
 
+/* 
+	cond -> waiter -> semaphore_elem의 elem(list_elem) -> semaphore->waiter의 elem(list_elem)으로 스레드에 접근해서
+	스레드의 우선순위를 확인하고 이에 맞춰서 semaphore_elem를 정렬하기 위해 a, b를 비교하는 함수
+*/
+bool sema_priority_greater(struct list_elem *a, struct list_elem *b, void *aux);
 /* 최적화 배리어(Optimization barrier).
  *
  * 컴파일러는 최적화 배리어를 넘어서 연산의 순서를 바꾸지

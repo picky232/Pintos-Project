@@ -95,11 +95,17 @@ bool thread_priority_greater(const struct list_elem *a, const struct list_elem *
 /* 스레드 우선순위 확인 후 스위칭 */
 void
 thread_priority_switch (void) {
+	enum intr_level old = intr_disable ();
     if (!list_empty (&ready_list)) {
         struct thread *rt = list_entry (list_begin (&ready_list), struct thread, elem);
-        if (thread_current ()->priority < rt->priority)
-            thread_yield ();
+		/* 우선순위 확인 */
+		if ( thread_current ()->priority < rt->priority ){
+			/* 외부 인터럽트에서 호출된건지 아닌지 판단하고 호출된거라면 양보 예약 적용 */
+			if (intr_context()) intr_yield_on_return();
+			else thread_yield ();
+		}
     }
+	intr_set_level (old);
 }
 
 /* 지금 실행 중인 코드를 스레드로 변환해서 스레딩 시스템을
@@ -315,8 +321,8 @@ thread_block (void) {
    T가 블록된 상태가 아니면 오류임. (실행 중인 스레드를 ready로 만들려면
    thread_yield()를 쓸 것.)
 
-   이 함수는 실행 중인 스레드를 선점하지 않음. 이것은
-   중요할 수 있음. 호출한 쪽이 직접 인터럽트를 꺼 두었다면,
+   이 함수는 실행 중ㅎ
+   이것은 중요할 수 있음. 호출한 쪽이 직접 인터럽트를 꺼 두었다면,
    스레드를 unblock하고 다른 데이터를 갱신하는 것을
    원자적으로 할 수 있다고 기대할 수 있기 때문임. */
 void
@@ -401,6 +407,8 @@ thread_yield (void) {
 void
 thread_set_priority (int new_priority) {
 	thread_current ()->priority = new_priority;
+	/* 우선순위가 낮아지면 바꿈 */
+	thread_priority_switch();
 }
 
 /* 현재 스레드의 우선순위를 반환함. */
