@@ -391,7 +391,8 @@ thread_yield (void) {
 
 	old_level = intr_disable ();
 	if (curr != idle_thread)
-		list_push_back (&ready_list, &curr->elem);
+		/* 양보하고 ready_list에 넣을때도 정렬된 상태로 삽입 */
+		list_insert_ordered (&ready_list, &curr->elem, thread_priority_greater, NULL);
 	do_schedule (THREAD_READY);
 	intr_set_level (old_level);
 }

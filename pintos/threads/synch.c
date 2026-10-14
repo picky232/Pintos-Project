@@ -194,6 +194,9 @@ lock_acquire (struct lock *lock) {
 	/* 락 주인보다 내 우선순위가 높으면,
     락 주인의 우선순위를 내 값으로 올린다 (기부). */
 	if (lock->holder != NULL){
+		/* 기다리고 있는 락 가지고 있기 */
+		thread_current()->donate_box.wait_lock = lock;
+		list_push_back(&thread_current()->donate_box.donated_list, &lock->holder->donate_box.don_elem);
 		if (thread_current()->priority > lock->holder->priority){
 			lock->holder->priority = thread_current()->priority;
 		}
