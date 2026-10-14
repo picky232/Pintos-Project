@@ -163,6 +163,11 @@ bool check_thread_less (const struct list_elem *a, const struct list_elem *b, vo
 
 /* ready_list 정렬을 우선순위에 따라 맞추도록 돕는 함수 */
 bool thread_priority_greater(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+
+/* lock_release 에서 list_max 로 가장 높은 기부자를 찾을 때 쓰는 비교 함수.
+   donated_list 의 고리(don_elem)로 꺼내며, a 가 b 보다 낮으면 true. */
+bool donation_priority_less (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED);
+
 /* 스레드 우선순위 확인 후 스위칭 */
 void thread_priority_switch (void);
 
