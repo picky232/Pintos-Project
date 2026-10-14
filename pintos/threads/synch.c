@@ -196,14 +196,20 @@ lock_acquire (struct lock *lock) {
 	if (lock->holder != NULL){
 		/* 기다리고 있는 락 가지고 있기 */
 		thread_current()->donate_box.wait_lock = lock;
-		list_push_back(&thread_current()->donate_box.donated_list, &lock->holder->donate_box.don_elem);
-		if (thread_current()->priority > lock->holder->priority){
-			lock->holder->priority = thread_current()->priority;
+		/* 현제 락을 쥐고있는 스레드의 기부리스트의 나의 우선순위 넣어둠 */
+		/* 나중에 holder의 우선순위가 내려갈 수 있기때문에 현재 우선순위가 holder보다 낮더라도 넣어줘야함  */
+		list_push_back(&lock->holder->donate_box.donated_list, &thread_current()->donate_box.don_elem);
+		/* 락 체인을 타고가서 기다리는 락이 또 있다면 우선순위를 기부해줌 */
+		for(struct lock *cur_lock = lock; cur_lock!=NULL && cur_lock->holder!=NULL; cur_lock = cur_lock->holder->donate_box.wait_lock){
+			/* cur_lock을 홀더의 기다리는 락으로 이동하며 순회 */
+			if (thread_current()->priority > cur_lock->holder->priority)
+				cur_lock->holder->priority = thread_current()->priority;
 		}
 	}
-
 	sema_down (&lock->semaphore);
 	lock->holder = thread_current ();
+	/* 락 쥐었으니 이제 대기하는 락 없음 */
+	thread_current()->donate_box.wait_lock = NULL;
 }
 
 /* Tries to acquires LOCK and returns true if successful or false

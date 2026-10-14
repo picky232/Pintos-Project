@@ -30,7 +30,7 @@ typedef int tid_t;
 
 struct donation{
 	struct lock *wait_lock;				/* 기다리는 lock */
-	struct list *donated_list;	 		/* 기부한 스레드들 */
+	struct list donated_list;	 		/* 기부한 스레드들 */
 	struct list_elem don_elem;			/* donated_list에 넣을 고리 */
 };
 
