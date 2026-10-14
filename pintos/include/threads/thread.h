@@ -28,6 +28,12 @@ typedef int tid_t;
 #define PRI_DEFAULT 31                  /* Default priority. */
 #define PRI_MAX 63                      /* Highest priority. */
 
+struct donation{
+	struct lock *wait_lock;				/* 기다리는 lock */
+	struct list donated_list;	 		/* 기부한 스레드들 */
+	struct list_elem don_elem;			/* donated_list에 넣을 고리 */
+};
+
 /* A kernel thread or user process.
  *
  * Each thread structure is stored in its own 4 kB page.  The
@@ -93,6 +99,7 @@ struct thread {
 	int priority;                       /* Priority. */
 	int init_priority;  				/* 원본 priority */
 
+	struct donation donate_box;			/* 도네이션용 lock_wait(대기중인 락), 기부한 스레드 리스트, 리스트에 엮기 위한 elem */
 	/* Shared between thread.c and synch.c. */
 	struct list_elem elem;              /* List element. */
 
