@@ -242,10 +242,32 @@ lock_release (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
 
-	/* 이 락을 기다리는 스레드가 있을 때만 (= 이 락 때문에 기부받았을 때만)
-	   현재 스레드의 priority를 init_priority로 되돌린다. */
-	if (!list_empty (&lock->semaphore.waiters))
-		thread_current()->priority = thread_current()->init_priority;
+	/* 이 락 때문에 기부한 스레드(wait_lock == lock)만 기부자 목록에서 뺀다.
+	   다른 락을 기다리는 기부자의 기부는 아직 끝나지 않았으므로 남긴다.
+	   목록이 정렬돼 있지 않아 중간에 멈추지 않고 끝까지 본다. */
+	struct list_elem *e = list_begin (&thread_current ()->donate_box.donated_list);
+
+	while (e != list_end (&thread_current ()->donate_box.donated_list)) {
+		struct thread *t = list_entry (e, struct thread, donate_box.don_elem);
+
+		if (t->donate_box.wait_lock == lock) {
+			e = list_remove (e);
+		} else {
+			e = list_next (e);
+		}
+	}
+
+	/* 남은 기부자 목록 중 최댓값과 원래 우선순위 중 큰 값으로 다시 계산한다.
+	   기부자는 주인보다 낮아도 목록에 들어가므로, 원래 값 아래로 내려가지 않게 비교한다.
+	   목록이 비면 list_max 가 tail 을 돌려주므로 먼저 확인한다. */
+	thread_current ()->priority = thread_current ()->init_priority;
+
+	struct list_elem *max_e = list_max (&thread_current ()->donate_box.donated_list, donation_priority_less, NULL);
+
+	if (!list_empty (&thread_current ()->donate_box.donated_list)) {
+		if (list_entry (max_e, struct thread, donate_box.don_elem)->priority > thread_current ()->init_priority)
+			thread_current ()->priority = list_entry (max_e, struct thread, donate_box.don_elem)->priority;
+	}
 
 	lock->holder = NULL;
 	sema_up (&lock->semaphore);

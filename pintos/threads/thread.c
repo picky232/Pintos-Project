@@ -66,6 +66,15 @@ static void do_schedule(int status);
 static void schedule (void);
 static tid_t allocate_tid (void);
 
+bool
+donation_priority_less (const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
+{
+	struct thread *donor_a = list_entry (a, struct thread, donate_box.don_elem);
+	struct thread *donor_b = list_entry (b, struct thread, donate_box.don_elem);
+
+	return (donor_a->priority < donor_b->priority) ? true : false;
+}
+
 /* ready_list 정렬을 우선순위에 따라 맞추도록 돕는 함수 */
 bool thread_priority_greater(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED)
 {
