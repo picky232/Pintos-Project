@@ -400,7 +400,17 @@ thread_yield (void) {
 /* Sets the current thread's priority to NEW_PRIORITY. */
 void
 thread_set_priority (int new_priority) {
-	thread_current ()->priority = new_priority;
+
+	/* 우선순위를 기부받은 상태인지 확인.
+	   기부 중이면 원래 값만 바꾸고, 지금 값은 lock_release 때 반영된다. */	
+	if (thread_current ()->init_priority != thread_current () ->priority){
+		thread_current ()->init_priority = new_priority;
+	}
+	else{
+		thread_current ()->init_priority = new_priority;
+		thread_current ()->priority = new_priority;
+	}
+
 	/* 우선순위가 낮아지면 바꿈 */
 	thread_priority_switch();
 }
