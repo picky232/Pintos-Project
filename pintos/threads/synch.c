@@ -233,8 +233,11 @@ lock_release (struct lock *lock) {
 	ASSERT (lock != NULL);
 	ASSERT (lock_held_by_current_thread (lock));
 
-	/* 현재 스레드의 priority를 init_priority로 */
-	thread_current()->priority = thread_current()->init_priority;
+	/* 이 락을 기다리는 스레드가 있을 때만 (= 이 락 때문에 기부받았을 때만)
+	   현재 스레드의 priority를 init_priority로 되돌린다. */
+	if (!list_empty (&lock->semaphore.waiters))
+		thread_current()->priority = thread_current()->init_priority;
+
 	lock->holder = NULL;
 	sema_up (&lock->semaphore);
 }
